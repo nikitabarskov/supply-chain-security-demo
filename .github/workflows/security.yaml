@@ -1,0 +1,29 @@
+---
+on:
+  pull_request:
+    branches:
+      - "main"
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+env:
+  XDG_CACHE_HOME: ${{ github.workspace }}/.cache/xdg
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: python
+    steps:
+      - uses: actions/checkout@v4
+      - uses: extractions/setup-just@v1
+      - run: |
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+          curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin
+      - run: |
+          just report-vulnerabilities
+      - uses: github/codeql-action/upload-sarif@v3
+        with:
+          category: vulnerabilities
+          sarif_file: ${{ github.workspace }}/python/vulnerabilities.grype.json

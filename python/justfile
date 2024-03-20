@@ -1,0 +1,26 @@
+default:
+    just list
+
+configure:
+    pip install requirements.txt
+
+generate-requirements:
+    uv pip compile --generate-hashes --output-file requirements.txt requirements.in
+
+image-digest:
+    docker build --quiet . > .image-digest
+
+build: image-digest
+
+generate-sbom: build
+    syft --output syft-json=sbom.syft.json $(cat .image-digest)
+
+report-vulnerabilities: generate-sbom
+    grype --output sarif=vulnerabilities.grype.json sbom:sbom.syft.json
+
+fix:
+    tofu fmt -recursive .
+
+validate:
+    tofu fmt -check -recursive .
+    tofu validate .
